@@ -244,6 +244,14 @@ Most service calls can be found before they crash, before the first boot or the 
 - **Fix:** the host now signals it once when it is bound for a connected controller, and again when a player's controller connects or goes away.
 - **Found on:** [The Legend of Zelda: Link's Awakening](../../dm/games/01006BB00C6F0000/README.md) (SDK 8.2.0).
 
+### Mac display sleep during controller play
+
+- **Symptom:** the Mac dims or turns off its display and can reach the lock screen while the player is using a controller, including in fullscreen.
+- **Cause:** controller events do not reliably reset the macOS display-idle timer. The host's `NSActivityUserInitiated | NSActivityLatencyCritical` activity prevents idle system sleep but does not include `NSActivityIdleDisplaySleepDisabled`; fullscreen alone does not keep the display awake.
+- **Fix:** `front_mac.m` holds a separate Foundation `NSActivityIdleDisplaySleepDisabled` activity while the game window is key, releasing it when input loses focus or the window is minimized. Startup checks the current key-window state because the first focus notification can precede observer registration. Headless runs do not acquire this activity. This uses the SDK's documented native activity option, without synthetic input, timers, dependencies or changes to the user's power settings; explicit lock and sleep remain available.
+- **Validation:** `test_mac_display_sleep.py` compiles the production activity helper and queries the real IOKit power assertions for the test process: acquire, duplicate acquire, release, duplicate release and reacquire. It also checks the existing input-focus integration. A physical controller/fullscreen idle timeout remains a manual check.
+- **Found on:** [Mario Kart 8 Deluxe](../../dm/games/0100152000022000/README.md), reported during controller play on a Mac.
+
 ### Six-axis sensors
 
 - **Symptom:** motion moves never happen; shaking does nothing (Super Mario Odyssey: cap throws by shaking).
